@@ -21,7 +21,7 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 
 type Parser = ParsecT Void Text (State ParserState)
 data ParserState = PS
-  { _map   :: HashMap Text Term
+  { _map   :: HashMap Text (Int, Term)
   , _depth :: Int
   }
 
@@ -73,8 +73,8 @@ idx = do
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term
 def = do
-  name                <- identifier
-  PS { _map = names } <- get
+  name                             <- identifier
+  PS { _map = names, _depth = d1 } <- get
   case M.lookup name names of
     Just (d2, t) -> pure $ shift (d1 - d2) t
     Nothing      -> fail $ T.unpack name <> " is not in scope"
@@ -98,7 +98,8 @@ definition = do
   _    <- startSymbol "="
   _    <- spaces
   body <- term
-  modify $ \r@(PS { _map = m }) -> r { _map = M.insert name body m }
+  modify $ \r@(PS { _map = m, _depth = d }) ->
+    r { _map = M.insert name (d, body) m }
 
 -- | many definitions, seperated by newline or semicolon
 definitions :: Parser [()]

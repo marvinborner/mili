@@ -12,9 +12,13 @@ import           Data.Mili                      ( Term(..) )
 -- | A trace specifies the exact path to any subterm
 type Trace = [Breadcrumb]
 
-data Breadcrumb = South -- | Down into abstraction
-                | West  -- | Left hand side of application
-                | East  -- | Right hand side of application
+data Breadcrumb = AbsD -- | Down into abstraction
+                | AppL -- | Left side of application
+                | AppR -- | Right side of application
+                | MinE -- | End case of Min
+                | MinF -- | Function of Min
+                | ItrE -- | End case of Iter
+                | ItrF -- | Function of Iter
   deriving (Eq, Show)
 
 -- | Map abstractions to a hashmap such that de Bruijn levels correspond to traces
@@ -23,18 +27,26 @@ traceAbs :: Term -> HashMap Int [Trace]
 traceAbs = go 0 []
  where
   go n t (Abs m) =
-    M.unionWith (++) (go (n + 1) (South : t) m) (M.singleton n [t])
-  go n t (App a b) = M.unionWith (++) (go n (West : t) a) (go n (East : t) b)
-  go _ _ (Lvl _  ) = M.empty
+    M.unionWith (++) (go (n + 1) (AbsD : t) m) (M.singleton n [t])
+  go n t (App a b  ) = M.unionWith (++) (go n (AppL : t) a) (go n (AppR : t) b)
+  go _ _ (Lvl _    ) = M.empty
+  go _ _ (Num _    ) = M.empty
+  go n t (Min _ u f) = M.unionWith (++) (go n (MinE : t) u) (go n (MinF : t) f)
+  go n t (Itr _ u v) = M.unionWith (++) (go n (ItrE : t) u) (go n (ItrF : t) v)
+
+-- TODO: Merge these two v^
 
 -- | Map de Bruijn levels to a hashmap such that de Bruijn levels correspond to
 -- | traces of de Bruijn levels at that level
 traceLvl :: Term -> HashMap Int [Trace]
 traceLvl = go []
  where
-  go t (Abs m  ) = go (South : t) m
-  go t (App a b) = M.unionWith (++) (go (West : t) a) (go (East : t) b)
-  go t (Lvl l  ) = M.singleton l [t]
+  go t (Abs m    ) = go (AbsD : t) m
+  go t (App a b  ) = M.unionWith (++) (go (AppL : t) a) (go (AppR : t) b)
+  go t (Lvl l    ) = M.singleton l [t]
+  go _ (Num _    ) = M.empty
+  go t (Min _ u f) = M.unionWith (++) (go (MinE : t) u) (go (MinF : t) f)
+  go t (Itr _ u v) = M.unionWith (++) (go (ItrE : t) u) (go (ItrF : t) v)
 
 -- | Unify two two mapped traces to find levels at which the traces are no suffixes
 -- | Level traces not being a suffix of abstraction traces implies nonlinearity
