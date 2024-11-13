@@ -8,7 +8,9 @@ import           Control.Monad                  ( void )
 import           Control.Monad.State
 import           Data.HashMap.Strict            ( HashMap )
 import qualified Data.HashMap.Strict           as M
-import           Data.Mili                      ( Term(..) )
+import           Data.Mili                      ( Term(..)
+                                                , shift
+                                                )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
@@ -55,7 +57,6 @@ startSymbol :: Text -> Parser Text
 startSymbol t = symbol t <* anySpaces
 
 -- | abstraction, entering increases the abstraction depth
--- TODO: There's a bug in here with open terms backtracking to increment lol
 abs :: Parser Term
 abs = between (startSymbol "[") (symbol "]") (Abs <$> (inc *> block <* dec))
  where
@@ -67,9 +68,7 @@ idx :: Parser Term
 idx = do
   n                 <- L.decimal
   PS { _depth = d } <- get
-  case d - n - 1 of
-    i | i < 0     -> fail "open term"
-      | otherwise -> pure $ Lvl i
+  pure $ Lvl $ d - n - 1
 
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term
@@ -77,8 +76,8 @@ def = do
   name                <- identifier
   PS { _map = names } <- get
   case M.lookup name names of
-    Just t  -> pure t
-    Nothing -> fail $ T.unpack name <> " is not in scope"
+    Just (d2, t) -> pure $ shift (d1 - d2) t
+    Nothing      -> fail $ T.unpack name <> " is not in scope"
 
 -- | single lambda term, potentially a left application fold of many
 term :: Parser Term
