@@ -13,7 +13,7 @@ import           Prelude                 hiding ( abs
 
 data Nat = Z | S Term
 
-data Term = Abs Term                       -- | Abstraction
+data Term = Abs Int Term                   -- | Abstraction with level
           | App Term Term                  -- | Application
           | Lvl Int                        -- | de Bruijn level
           | Num Nat                        -- | Peano numeral
@@ -21,10 +21,10 @@ data Term = Abs Term                       -- | Abstraction
 
 instance Show Nat where
   show Z     = "Z"
-  show (S t) = "S " <> show t
+  show (S t) = "S(" <> show t <> ")"
 
 instance Show Term where
-  showsPrec _ (Abs m) = showString "[" . shows m . showString "]"
+  showsPrec _ (Abs _ m) = showString "[" . shows m . showString "]"
   showsPrec _ (App m n) =
     showString "(" . shows m . showString " " . shows n . showString ")"
   showsPrec _ (Lvl i) = shows i
@@ -42,14 +42,14 @@ instance Show Term where
       . shows w
 
 fold
-  :: (Term -> Term)
+  :: (Int -> Term -> Term)
   -> (Term -> Term -> Term)
   -> (Int -> Term)
   -> (Nat -> Term)
   -> ((Term, Nat) -> Term -> Term -> Term -> Term)
   -> Term
   -> Term
-fold abs app lvl num rec (Abs m) = abs $ fold abs app lvl num rec m
+fold abs app lvl num rec (Abs l m) = abs l $ fold abs app lvl num rec m
 fold abs app lvl num rec (App a b) =
   app (fold abs app lvl num rec a) (fold abs app lvl num rec b)
 fold _   _   lvl _   _   (Lvl n           ) = lvl n

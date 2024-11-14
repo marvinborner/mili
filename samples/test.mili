@@ -1,0 +1,8 @@
+foo = [
+  huh = [[[0 1 2]]]
+  abc = [[huh 0 1]]
+  def = [abc 0 huh]
+  def [0 1]
+]
+
+[foo 0]

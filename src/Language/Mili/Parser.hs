@@ -77,7 +77,9 @@ toLevel n = do
 
 -- | abstraction, entering increases the abstraction depth
 abs :: Parser Term
-abs = between (startSymbol "[") (symbol "]") (Abs <$> (inc *> block <* dec))
+abs = between (startSymbol "[")
+              (symbol "]")
+              (gets (Abs <$> _depth) <*> (inc *> block <* dec))
  where
   inc = modify $ \r@(PS { _depth = d }) -> r { _depth = d + 1 }
   dec = modify $ \r@(PS { _depth = d }) -> r { _depth = d - 1 }
@@ -98,28 +100,22 @@ rec :: Parser Term
 rec = do
   _  <- symbol "REC"
   _  <- spaces
-  _  <- symbol "("
-  _  <- spaces
+  _  <- startSymbol "("
   t  <- term
   _  <- spaces
-  _  <- symbol ","
-  _  <- spaces
+  _  <- startSymbol ","
   t' <- nat
   _  <- spaces
-  _  <- symbol ")"
-  _  <- spaces
-  _  <- symbol ","
-  _  <- spaces
+  _  <- startSymbol ")"
+  _  <- startSymbol ","
   u  <- term
   _  <- spaces
-  _  <- symbol ","
-  _  <- spaces
+  _  <- startSymbol ","
   v  <- term
   _  <- spaces
-  _  <- symbol ","
-  _  <- spaces
+  _  <- startSymbol ","
   w  <- term
-  pure $ Rec (t, t') u v w -- TODO
+  pure $ Rec (t, t') u v w
 
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term

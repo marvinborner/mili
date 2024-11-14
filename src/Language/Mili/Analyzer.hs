@@ -33,7 +33,7 @@ data Breadcrumb = AbsD -- | Down into abstraction
 traceAbs :: Term -> HashMap Int [Trace]
 traceAbs = go 0 [Root]
  where
-  go n t (Abs m) =
+  go n t (Abs _ m) =
     M.unionWith (++) (go (n + 1) (AbsD : t) m) (M.singleton n [t])
   go n t (App a b) = M.unionWith (++) (go n (AppL : t) a) (go n (AppR : t) b)
   go _ _ (Lvl _            ) = M.empty
@@ -54,7 +54,7 @@ traceAbs = go 0 [Root]
 traceLvl :: Term -> HashMap Int [Trace]
 traceLvl = go [Root]
  where
-  go t (Abs m            ) = go (AbsD : t) m
+  go t (Abs _ m          ) = go (AbsD : t) m
   go t (App a b) = M.unionWith (++) (go (AppL : t) a) (go (AppR : t) b)
   go t (Lvl l            ) = M.singleton l [t]
   go _ (Num Z            ) = M.empty
