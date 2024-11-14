@@ -1,3 +1,5 @@
+-- MIT License, Copyright (c) 2024 Marvin Borner
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.Mili.Parser
@@ -6,15 +8,19 @@ module Language.Mili.Parser
 
 import           Control.Monad                  ( void )
 import           Control.Monad.State
+import           Data.Functor                   ( ($>) )
 import           Data.HashMap.Strict            ( HashMap )
 import qualified Data.HashMap.Strict           as M
-import           Data.Mili                      ( Term(..)
+import           Data.Mili                      ( Nat(..)
+                                                , Term(..)
                                                 , shift
                                                 )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
-import           Prelude                 hiding ( abs )
+import           Prelude                 hiding ( abs
+                                                , min
+                                                )
 import           Text.Megaparsec         hiding ( State )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
@@ -56,6 +62,19 @@ symbol = string
 startSymbol :: Text -> Parser Text
 startSymbol t = symbol t <* anySpaces
 
+-- | natural number
+nat :: Parser Nat
+nat = natify <$> between (startSymbol "<") (symbol ">") L.decimal
+ where
+  natify 0 = Z
+  natify n = S $ Num $ natify (n - 1 :: Integer)
+
+-- | convert de Bruijn indices to levels
+toLevel :: Int -> Parser Term
+toLevel n = do
+  PS { _depth = d } <- get
+  pure $ Lvl $ d - n - 1
+
 -- | abstraction, entering increases the abstraction depth
 abs :: Parser Term
 abs = between (startSymbol "[") (symbol "]") (Abs <$> (inc *> block <* dec))
@@ -65,10 +84,42 @@ abs = between (startSymbol "[") (symbol "]") (Abs <$> (inc *> block <* dec))
 
 -- | de Bruijn index, parsed to de Bruijn level
 idx :: Parser Term
-idx = do
-  n                 <- L.decimal
-  PS { _depth = d } <- get
-  pure $ Lvl $ d - n - 1
+idx = L.decimal >>= toLevel
+
+-- | single number: <n> | S <term> | Z
+num :: Parser Term
+num =
+  (Num <$> nat)
+    <|> (Num <$> ((string "S" *> spaces $> S) <*> term))
+    <|> (Num <$> (string "Z" $> Z))
+
+-- | unbounded iterator: REC (<term>, <nat>), <term>, <term>, <term>
+rec :: Parser Term
+rec = do
+  _  <- symbol "REC"
+  _  <- spaces
+  _  <- symbol "("
+  _  <- spaces
+  t  <- term
+  _  <- spaces
+  _  <- symbol ","
+  _  <- spaces
+  t' <- nat
+  _  <- spaces
+  _  <- symbol ")"
+  _  <- spaces
+  _  <- symbol ","
+  _  <- spaces
+  u  <- term
+  _  <- spaces
+  _  <- symbol ","
+  _  <- spaces
+  v  <- term
+  _  <- spaces
+  _  <- symbol ","
+  _  <- spaces
+  w  <- term
+  pure $ Rec (t, t') u v w -- TODO
 
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term
@@ -83,7 +134,7 @@ def = do
 term :: Parser Term
 term = try chain <|> once
  where
-  once  = abs <|> idx <|> def <|> parens block
+  once  = abs <|> idx <|> num <|> rec <|> def <|> parens block
   chain = foldl1 App <$> sepEndBy1 (try once) (char ' ')
 
 -- | single identifier, a-z

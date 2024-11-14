@@ -1,3 +1,5 @@
+-- MIT License, Copyright (c) 2024 Marvin Borner
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main
