@@ -1,3 +1,28 @@
-add = [[REC (1, <0>), 0, [S 0], [[[0 2 1]]]]]
-mul = [[REC (1, <0>), <0>, (add 0), [[[0 2 1]]]]]
-add <0> <2>
+-- identity
+i = [0]
+
+-- first element of Church pair
+fst = [0 [[REC (0, <0>), 1, i, i]]]
+
+-- second element of Church pair
+snd = [0 [[REC (1, <0>), 0, i, i]]]
+
+-- copy numbers
+c = [REC (0, <0>), [0 <0> <0>], [0 [[[0 (S 2) (S 1)]]]], i]
+
+-- add two numbers
+add = [[REC (1, <0>), 0, [S 0], i]]
+
+-- multiply two numbers
+mul = [[REC (1, <0>), <0>, (add 0), i]]
+
+-- decrement number by one
+dec = [
+  f = [c (snd 0) [[[0 2 (S 1)]]]]
+  fst (REC (0, <0>), [0 <0> <0>], f, i)
+]
+
+-- <0> if zero, <1> if not
+iszero = [fst (REC (0, <0>), [0 <0> (S <0>)], [c (snd 0)], i)]
+
+iszero (mul <5> (dec <4>))

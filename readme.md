@@ -16,11 +16,11 @@ while still benefitting from the advantages of syntactic linearity.
 Mili's core syntactic representation consists of only five constructs:
 
 ``` haskell
-data Term = Abs Int Term                   -- | Abstraction at level
-          | App Term Term                  -- | Application
-          | Lvl Int                        -- | de Bruijn level
-          | Num Nat                        -- | Peano numeral
-          | Rec (Term, Nat) Term Term Term -- | Unbounded iteration
+data Term = Abs Int Term                    -- | Abstraction at level
+          | App Term Term                   -- | Application
+          | Lvl Int                         -- | de Bruijn level
+          | Num Nat                         -- | Peano numeral
+          | Rec (Term, Term) Term Term Term -- | Unbounded iteration
 ```
 
 Lets and Pairs are only used in the higher-level syntax. This allows us
@@ -38,6 +38,7 @@ to use a minimal abstract reduction machine.
     -   [ ] `:test`
     -   [ ] `:import`
 -   [ ] more examples
+-   [ ] compile to LLVM stack machine
 
 ## references
 

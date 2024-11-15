@@ -17,15 +17,16 @@ import           Debug.Trace
 -- | A trace specifies the exact path to any subterm
 type Trace = [Breadcrumb]
 
-data Breadcrumb = AbsD -- | Down into abstraction
-                | AppL -- | Left side of application
-                | AppR -- | Right side of application
-                | NumS -- | Successor of number
-                | RecT -- | Term of rec -- TODO: RecT2??
-                | RecU -- | End of rec
-                | RecV -- | Function 1 of rec
-                | RecW -- | Function 2 of rec
-                | Root -- | Root
+data Breadcrumb = AbsD  -- | Down into abstraction
+                | AppL  -- | Left side of application
+                | AppR  -- | Right side of application
+                | NumS  -- | Successor of number
+                | RecT1 -- | Term 1 of rec
+                | RecT2 -- | Term 2 of rec
+                | RecU  -- | End of rec
+                | RecV  -- | Function 1 of rec
+                | RecW  -- | Function 2 of rec
+                | Root  -- | Root
   deriving (Eq, Show)
 
 -- | Map abstractions to a hashmap such that de Bruijn levels correspond to traces
@@ -36,15 +37,16 @@ traceAbs = go 0 [Root]
   go n t (Abs _ m) =
     M.unionWith (++) (go (n + 1) (AbsD : t) m) (M.singleton n [t])
   go n t (App a b) = M.unionWith (++) (go n (AppL : t) a) (go n (AppR : t) b)
-  go _ _ (Lvl _            ) = M.empty
-  go _ _ (Num Z            ) = M.empty
-  go n t (Num (S i)        ) = go n (NumS : t) i
-  go n t (Rec (t1, _) u v w) = foldl1
+  go _ _ (Lvl _             ) = M.empty
+  go _ _ (Num Z             ) = M.empty
+  go n t (Num (S i)         ) = go n (NumS : t) i
+  go n t (Rec (t1, t2) u v w) = foldl1
     (M.unionWith (++))
-    [ go n (RecT : t) t1
-    , go n (RecU : t) u
-    , go n (RecV : t) v
-    , go n (RecW : t) w
+    [ go n (RecT1 : t) t1
+    , go n (RecT2 : t) t2
+    , go n (RecU : t)  u
+    , go n (RecV : t)  v
+    , go n (RecW : t)  w
     ]
 
 -- TODO: Merge these two v^
@@ -54,14 +56,19 @@ traceAbs = go 0 [Root]
 traceLvl :: Term -> HashMap Int [Trace]
 traceLvl = go [Root]
  where
-  go t (Abs _ m          ) = go (AbsD : t) m
+  go t (Abs _ m           ) = go (AbsD : t) m
   go t (App a b) = M.unionWith (++) (go (AppL : t) a) (go (AppR : t) b)
-  go t (Lvl l            ) = M.singleton l [t]
-  go _ (Num Z            ) = M.empty
-  go t (Num (S i)        ) = go (NumS : t) i
-  go t (Rec (t1, _) u v w) = foldl1
+  go t (Lvl l             ) = M.singleton l [t]
+  go _ (Num Z             ) = M.empty
+  go t (Num (S i)         ) = go (NumS : t) i
+  go t (Rec (t1, t2) u v w) = foldl1
     (M.unionWith (++))
-    [go (RecT : t) t1, go (RecU : t) u, go (RecV : t) v, go (RecW : t) w]
+    [ go (RecT1 : t) t1
+    , go (RecT2 : t) t2
+    , go (RecU : t)  u
+    , go (RecV : t)  v
+    , go (RecW : t)  w
+    ]
 
 -- | Unify two two mapped traces to find levels at which the traces are no suffixes
 -- | Level traces not being a suffix of abstraction traces implies nonlinearity

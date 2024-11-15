@@ -101,10 +101,10 @@ rec = do
   _  <- symbol "REC"
   _  <- spaces
   _  <- startSymbol "("
-  t  <- term
+  t1 <- term
   _  <- spaces
   _  <- startSymbol ","
-  t' <- nat
+  t2 <- term
   _  <- spaces
   _  <- startSymbol ")"
   _  <- startSymbol ","
@@ -115,7 +115,7 @@ rec = do
   _  <- spaces
   _  <- startSymbol ","
   w  <- term
-  pure $ Rec (t, t') u v w
+  pure $ Rec (t1, t2) u v w
 
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term

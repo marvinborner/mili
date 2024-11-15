@@ -10,34 +10,31 @@ import           Data.Mili                      ( Nat(..)
                                                 )
 
 data Singleton = TermTag Term | RecTag Term Term Term Term
-  deriving Show
 
 -- TODO: There will only ever be one substitution, so don't iterate the entire tree!
--- Otherwise replace with fold
-subst :: Int -> Term -> Term -> Term
-subst l (Abs d m) s = Abs d $ subst l m s
-subst l (App a b) s = App (subst l a s) (subst l b s)
-subst l (Lvl i) s | l == i    = s
-                  | otherwise = (Lvl i)
-subst _ (Num Z    ) _ = Num Z
-subst l (Num (S m)) s = Num $ S $ subst l m s
-subst l (Rec (t1, t2) u v w) s =
-  Rec (subst l t1 s, t2) (subst l u s) (subst l v s) (subst l w s)
+-- WARNING: This function also shifts the substituted term and the levels of the parent!
+subst :: Int -> Int -> Term -> Term -> Term
+subst c l (Abs d m) s = Abs (d - 1) $ subst (c + 1) l m s
+subst c l (App a b) s = App (subst c l a s) (subst c l b s)
+subst c l (Lvl i) s | l == i    = shift c s
+                    | otherwise = Lvl $ i - 1
+subst _ _ (Num Z             ) _ = Num Z
+subst c l (Num (S m)         ) s = Num $ S $ subst c l m s
+subst c l (Rec (t1, t2) u v w) s = Rec (subst c l t1 s, subst c l t2 s)
+                                       (subst c l u s)
+                                       (subst c l v s)
+                                       (subst c l w s)
 
-machine :: Term -> [Singleton] -> (Term, [Singleton])
-machine (App a b) s = (a, TermTag b : s)
-machine (Abs l u) (TermTag t : s) = (shift (-1) (subst l u t), s)
-machine (Rec (t1, t2) u v w) s = (t1, RecTag (Num t2) u v w : s)
-machine (Num Z) (RecTag _ u _ _ : s) = (u, s)
+machine :: Term -> [Singleton] -> Term
+machine (App a b           ) s                    = machine a (TermTag b : s)
+machine (Abs l u           ) (TermTag t : s)      = machine (subst 0 l u t) s
+machine (Rec (t1, t2) u v w) s = machine t1 (RecTag t2 u v w : s)
+machine (Num Z             ) (RecTag _ u _ _ : s) = machine u s
 machine (Num (S t1)) ((RecTag t2 u v w) : s) =
-  (v, RecTag (App (App w t1) t2) u v w : s)
-machine t s = error $ show t <> show s
-
-runMachine :: [Singleton] -> Term -> Term
-runMachine s t = case machine t s of
-  (t', []) -> t'
-  (t', s') -> runMachine s' t'
+  machine v (TermTag (Rec (App w t1, App w t2) u v w) : s)
+machine (Num (S t)) s = Num $ S $ machine t s -- TODO: ??
+machine t           _ = t
 
 -- | Reduce term to normal form
 nf :: Term -> Term
-nf = runMachine []
+nf t = machine t []
