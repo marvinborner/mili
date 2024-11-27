@@ -37,10 +37,10 @@ traceAbs = go 0 [Root]
   go n t (Abs _ m) =
     M.unionWith (++) (go (n + 1) (AbsD : t) m) (M.singleton n [t])
   go n t (App a b) = M.unionWith (++) (go n (AppL : t) a) (go n (AppR : t) b)
-  go _ _ (Lvl _             ) = M.empty
-  go _ _ (Num Z             ) = M.empty
-  go n t (Num (S i)         ) = go n (NumS : t) i
-  go n t (Rec (t1, t2) u v w) = foldl1
+  go _ _ (Lvl _          ) = M.empty
+  go _ _ (Num Z          ) = M.empty
+  go n t (Num (S i)      ) = go n (NumS : t) i
+  go n t (Rec t1 t2 u v w) = foldl1
     (M.unionWith (++))
     [ go n (RecT1 : t) t1
     , go n (RecT2 : t) t2
@@ -56,12 +56,12 @@ traceAbs = go 0 [Root]
 traceLvl :: Term -> HashMap Int [Trace]
 traceLvl = go [Root]
  where
-  go t (Abs _ m           ) = go (AbsD : t) m
-  go t (App a b) = M.unionWith (++) (go (AppL : t) a) (go (AppR : t) b)
-  go t (Lvl l             ) = M.singleton l [t]
-  go _ (Num Z             ) = M.empty
-  go t (Num (S i)         ) = go (NumS : t) i
-  go t (Rec (t1, t2) u v w) = foldl1
+  go t (Abs _ m        ) = go (AbsD : t) m
+  go t (App a b        ) = M.unionWith (++) (go (AppL : t) a) (go (AppR : t) b)
+  go t (Lvl l          ) = M.singleton l [t]
+  go _ (Num Z          ) = M.empty
+  go t (Num (S i)      ) = go (NumS : t) i
+  go t (Rec t1 t2 u v w) = foldl1
     (M.unionWith (++))
     [ go (RecT1 : t) t1
     , go (RecT2 : t) t2

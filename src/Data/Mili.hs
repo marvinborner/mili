@@ -3,7 +3,6 @@
 module Data.Mili
   ( Term(..)
   , Nat(..)
-  , foldM
   , fold
   , shift
   ) where
@@ -44,31 +43,6 @@ instance Show Term where
       . showString ", "
       . shows w
 
-foldM
-  :: Monad m
-  => (Int -> Term -> m Term)
-  -> (Term -> Term -> m Term)
-  -> (Int -> m Term)
-  -> (Nat -> m Term)
-  -> (Term -> Term -> Term -> Term -> Term -> m Term)
-  -> Term
-  -> m Term
-foldM abs app lvl num rec (Abs d m) = foldM abs app lvl num rec m >>= abs d
-foldM abs app lvl num rec (App a b) = do
-  a' <- foldM abs app lvl num rec a
-  b' <- foldM abs app lvl num rec b
-  app a' b'
-foldM _   _   lvl _   _   (Lvl i          ) = pure i >>= lvl
-foldM _   _   _   num _   (Num Z          ) = pure Z >>= num
-foldM abs app lvl num rec (Num (S m)) = foldM abs app lvl num rec m >>= num . S
-foldM abs app lvl num rec (Rec t1 t2 u v w) = do
-  t1' <- foldM abs app lvl num rec t1
-  t2' <- foldM abs app lvl num rec t2
-  u'  <- foldM abs app lvl num rec u
-  v'  <- foldM abs app lvl num rec v
-  w'  <- foldM abs app lvl num rec w
-  rec t1' t2' u' v' w'
-
 fold
   :: (Int -> Term -> Term)
   -> (Term -> Term -> Term)
@@ -77,13 +51,18 @@ fold
   -> (Term -> Term -> Term -> Term -> Term -> Term)
   -> Term
   -> Term
-fold abs app lvl num rec term = runIdentity $ foldM
-  (\d m -> pure $ abs d m)
-  (\a b -> pure $ app a b)
-  (pure . lvl)
-  (pure . num)
-  (\t1 t2 u v w -> pure $ rec t1 t2 u v w)
-  term
+fold abs app lvl num rec (Abs l m) = abs l $ fold abs app lvl num rec m
+fold abs app lvl num rec (App a b) =
+  app (fold abs app lvl num rec a) (fold abs app lvl num rec b)
+fold _   _   lvl _   _   (Lvl n          ) = lvl n
+fold _   _   _   num _   (Num Z          ) = num Z
+fold abs app lvl num rec (Num (S t)) = num $ S $ fold abs app lvl num rec t
+fold abs app lvl num rec (Rec t1 t2 u v w) = rec
+  (fold abs app lvl num rec t1)
+  (fold abs app lvl num rec t2)
+  (fold abs app lvl num rec u)
+  (fold abs app lvl num rec v)
+  (fold abs app lvl num rec w)
 
 shift :: Int -> Term -> Term
 shift 0 = id

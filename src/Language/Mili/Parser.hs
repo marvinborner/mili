@@ -115,7 +115,7 @@ rec = do
   _  <- spaces
   _  <- startSymbol ","
   w  <- term
-  pure $ Rec (t1, t2) u v w
+  pure $ Rec t1 t2 u v w
 
 -- | single identifier, directly parsed to corresponding term
 def :: Parser Term

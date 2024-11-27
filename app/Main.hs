@@ -11,6 +11,7 @@ import qualified Data.Text                     as T
 import           Language.Mili.Analyzer         ( linearity )
 import           Language.Mili.Parser           ( parseProgram )
 import           Language.Mili.Reducer          ( nf )
+import           Language.Mili.Typer            ( typeCheck )
 import           Options.Applicative            ( (<**>)
                                                 , Parser
                                                 , execParser
@@ -30,7 +31,7 @@ args :: Parser Args
 args = pure $ Args ArgEval
 
 pipeline :: T.Text -> Either String Term
-pipeline program = parseProgram program >>= linearity
+pipeline program = parseProgram program >>= linearity >>= typeCheck
 
 actions :: Args -> IO ()
 actions Args { _argMode = ArgEval } = do

@@ -1,0 +1,14 @@
+-- garbage collection hack
+gc = [0 [0] [0] [0]]
+
+true = [[[0 2 1]]]
+false = [[[0 1 2]]]
+
+not = [[[2 0 1]]]
+
+and = [[1 0 false [[gc 0 1]]]]
+nand = [[not (and 1 0)]]
+or = [[1 true 0 [[gc 0 1]]]]
+nor = [[not (or 1 0)]]
+
+([0] <0>)
